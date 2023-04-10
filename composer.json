@@ -1,13 +1,22 @@
 {
-  "name": "belyys7/elasticsearch-its-easy",
+  "name": "idapgroup/elasticsearch-its-easy",
+  "type": "library",
   "description": "Simple search with elasticsearch",
-  "license": "MIT",
-  "keywords": ["elasticsearch"],
+  "homepage": "https://github.com/idapgroup/elasticsearch-its-easy",
+  "license": "BSD-3-Clause",
+  "keywords": [
+    "elasticsearch"
+  ],
+  "version": "1.0.0",
   "authors": [
     {
       "name": "Sergey Belyy",
       "email": "sergey.belyy.lion@gmail.com",
       "homepage": "https://github.com/belyys7"
+    },
+    {
+      "name": "Igor Matviichuk",
+      "email": "igor.matviichuk@idapgroup.com"
     }
   ],
   "minimum-stability": "stable",
@@ -17,7 +26,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Belyys7\\ElasticsearchItsEasy\\": "src/"
+      "IdapGroup\\ElasticsearchItsEasy\\": "src/"
     }
   }
 }

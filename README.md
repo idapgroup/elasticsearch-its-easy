@@ -13,7 +13,7 @@ The preferred way to install this extension is through [composer](https://getcom
 Either run
 
 ```
-composer require belyys7/elasticsearch-its-easy
+composer require idapgroup/elasticsearch-its-easy
 ```
 
 or add
@@ -21,7 +21,7 @@ or add
 ```json
 {
   "require": {
-    "belyys7/elasticsearch-its-easy": "^1.0.0"
+    "idapgroup/elasticsearch-its-easy": "^1.0.0"
   }
 }
 ```
@@ -110,7 +110,7 @@ $data = [
 ### Create your class to be expanded by basic search
 
 ```php
-use Belyys7\ElasticsearchItsEasy\ModelSearchBase;
+use IdapGroup\ElasticsearchItsEasy\ModelSearchBase;
 
 class StaffModelSearch extends ModelSearchBase
 {

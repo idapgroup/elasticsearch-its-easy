@@ -1,6 +1,6 @@
 <?php
 
-namespace Belyys7\ElasticsearchItsEasy;
+namespace IdapGroup\ElasticsearchItsEasy;
 
 use Exception;
 
