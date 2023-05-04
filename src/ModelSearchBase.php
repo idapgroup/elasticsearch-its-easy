@@ -3,6 +3,7 @@
 namespace IdapGroup\ElasticsearchItsEasy;
 
 use Exception;
+use Sk\Geohash\Geohash;
 
 class ModelSearchBase extends AbstractElasticSearchBase
 {
@@ -14,17 +15,22 @@ class ModelSearchBase extends AbstractElasticSearchBase
     const RULE_EQUAL = 'equal';
     const RULE_LIKE = 'like';
     const RULE_IN = 'in';
-    const RULE_RANGE = 'range';
+    const RULE_RANGE_NUMBER = 'range_number';
+    const RULE_RANGE_DATE = 'range_date';
 
     const SORT_ASC = 'asc';
     const SORT_DESC = 'desc';
 
     const LIMIT_MAX_FIX = 100;
 
+    const ZOOM_START_CUSTOM_CLUSTER = 13;
+
     const DISTANCE_UNTIL = 'km';
 
     public $rules = [];
     public $sort = [];
+
+    public $overWriteRules = [];
 
     public $page = 1;
     public $limit = 10;
@@ -36,12 +42,15 @@ class ModelSearchBase extends AbstractElasticSearchBase
     public $locationLon;
     public $locationSort = self::SORT_DESC;
 
+    public $clustering = false;
+    public $zoom;
+
     /**
-     * @param $ip
-     * @param $port
-     * @param $indexSearch
+     * @param string $ip
+     * @param string $port
+     * @param string $indexSearch
      */
-    public function __construct($ip, $port, $indexSearch)
+    public function __construct(string $ip, string $port, string $indexSearch)
     {
         parent::__construct($ip, $port, $indexSearch);
 
@@ -49,6 +58,7 @@ class ModelSearchBase extends AbstractElasticSearchBase
         $this->setSort();
     }
 
+    // Example
     public function setRules()
     {
         // TODO: Implement setRules() method in child class
@@ -66,6 +76,7 @@ class ModelSearchBase extends AbstractElasticSearchBase
         */
     }
 
+    // Example
     public function setSort()
     {
         // TODO: Implement setRules() method in child class
@@ -78,10 +89,10 @@ class ModelSearchBase extends AbstractElasticSearchBase
     }
 
     /**
-     * @param $params
-     * @return int|mixed
+     * @param array $params
+     * @return int
      */
-    public function getLimit($params = [])
+    public function getLimit(array $params = []) : int
     {
         if ($this->fixLimit) {
             return $this->limit;
@@ -93,30 +104,30 @@ class ModelSearchBase extends AbstractElasticSearchBase
     }
 
     /**
-     * @param $limit
+     * @param int $limit
      * @return void
      */
-    public function enableFixLimitResult($limit = self::LIMIT_MAX_FIX)
+    public function enableFixLimitResult(int $limit = self::LIMIT_MAX_FIX) : void
     {
         $this->limit = $limit;
         $this->fixLimit = true;
     }
 
     /**
-     * @param $name
-     * @return array|mixed
+     * @param string $name
+     * @return array
      */
-    public function getRulesOfGroup($name)
+    public function getRulesOfGroup(string $name) : array
     {
         return $this->rules[$name] ?? [];
     }
 
     /**
-     * @param $params
+     * @param array $params
      * @return array
      * @throws Exception
      */
-    public function searchList($params = [])
+    public function searchList(array $params = []) : array
     {
         try {
 
@@ -125,6 +136,11 @@ class ModelSearchBase extends AbstractElasticSearchBase
             }
 
             $conditions = $this->prepareConditions($params);
+
+            if ($conditions['isChanged'] && $this->overWriteRules) {
+                $conditions = $this->prepareOverWriteRules($conditions);
+            }
+
             $sort = $this->prepareSort();
             $limit = $this->getLimit($params);
 
@@ -164,11 +180,11 @@ class ModelSearchBase extends AbstractElasticSearchBase
     }
 
     /**
-     * @param $params
+     * @param array $params
      * @return array
      * @throws Exception
      */
-    public function searchMap($params = [])
+    public function searchMap(array $params = []) : array
     {
         try {
 
@@ -177,6 +193,11 @@ class ModelSearchBase extends AbstractElasticSearchBase
             }
 
             $conditions = $this->prepareConditions($params);
+
+            if ($conditions['isChanged'] && $this->overWriteRules) {
+                $conditions = $this->prepareOverWriteRules($conditions);
+            }
+
             $sort = $this->prepareSort();
 
             $allElasticsearchHits = [];
@@ -208,6 +229,10 @@ class ModelSearchBase extends AbstractElasticSearchBase
                 }
             }
 
+            if ($this->clustering && $this->zoom >= self::ZOOM_START_CUSTOM_CLUSTER) {
+                return $this->prepareClustering($allElasticsearchHits);
+            }
+
             return $allElasticsearchHits;
 
         } catch (Exception $e) {
@@ -216,11 +241,11 @@ class ModelSearchBase extends AbstractElasticSearchBase
     }
 
     /**
-     * @param $params
+     * @param array $params
      * @return array
      * @throws Exception
      */
-    private function prepareConditions($params = [])
+    private function prepareConditions(array $params = []) : array
     {
         $conditions = [];
         $isChanged = false;
@@ -248,23 +273,56 @@ class ModelSearchBase extends AbstractElasticSearchBase
             $locationKey = key($location);
             $this->locationSort = $location[$locationKey];
 
-            if (!isset($params[$locationKey]['lat']) || !isset($params[$locationKey]['lon']) || !isset($params[$locationKey]['distance'])) {
+            $point = $params[$locationKey]['point'];
+
+            if (!$point) {
+                throw new Exception('Wrong value for GROUP_LOCATION, params: point is required');
+            }
+
+            $pointLat = $point['lat'];
+            $pointLng = $point['lon'];
+            $pointDistance = $point['distance'];
+
+            if (!$pointLat || !$pointLng || !$pointDistance) {
                 throw new Exception('Wrong value for GROUP_LOCATION, params: lat, lon, distance is required');
             }
 
             $this->enabledGeo = true;
-            $this->locationLat = (float) $params[$locationKey]['lat'];
-            $this->locationLon = (float) $params[$locationKey]['lon'];
+            $this->locationLat = (float) $pointLat;
+            $this->locationLon = (float) $pointLng;
 
             $filterConditions[] = [
                 'geo_distance' => [
-                    'distance' => (int) $params[$locationKey]['distance'] . self::DISTANCE_UNTIL,
+                    'distance' => (int) $pointDistance . self::DISTANCE_UNTIL,
                     'location' => [
                         'lat' => $this->locationLat,
                         'lon' => $this->locationLon,
                     ],
                 ],
             ];
+
+            if (isset($params[$locationKey]['rectangle'])) {
+                list($topLeftLat, $topLeftLng, $bottomRightLat, $bottomRightLng) = $params[$locationKey]['rectangle'];
+                if ($topLeftLat && $topLeftLng && $bottomRightLat && $bottomRightLng) {
+                    $filterConditions[] = [
+                        'geo_bounding_box' => [
+                            'location' => [
+                                'top_left' => [
+                                    'lat' => $topLeftLat,
+                                    'lon' => $topLeftLng,
+                                ],
+                                'bottom_right' => [
+                                    'lat' => $bottomRightLat,
+                                    'lon' => $bottomRightLng,
+                                ],
+                            ],
+                        ],
+                    ];
+                }
+            }
+
+            $this->clustering = $params[$locationKey]['clustering'];
+            $this->zoom = $params[$locationKey]['zoom'];
         }
 
         if ($filterConditions) {
@@ -279,12 +337,12 @@ class ModelSearchBase extends AbstractElasticSearchBase
     }
 
     /**
-     * @param $rules
-     * @param $params
+     * @param array $rules
+     * @param array $params
      * @return array
      * @throws Exception
      */
-    private function collectRules($rules = [], $params = [])
+    private function collectRules(array $rules = [], array $params = []) : array
     {
         $data = [];
 
@@ -338,19 +396,38 @@ class ModelSearchBase extends AbstractElasticSearchBase
                             ];
                         }
                         break;
-                    case self::RULE_RANGE:
+                    case self::RULE_RANGE_NUMBER:
                         foreach ($relations as $key => $relation) {
                             if (!isset($params[$key])) {
                                 continue;
                             }
                             if (!isset($params[$key]['min']) || !isset($params[$key]['max'])) {
-                                throw new Exception('Wrong value for RULE_RANGE, key is - ' . $key . '. Required field is min/max');
+                                throw new Exception('Wrong value for RULE_RANGE_NUMBER, key is - ' . $key . '. Required field is min/max');
                             }
                             $data[] = [
                                 'range' => [
                                     $relation => [
-                                        "gte" => (float) $params[$key]['min'],
-                                        "lte" => (float) $params[$key]['max'],
+                                        'gte' => (float) $params[$key]['min'],
+                                        'lte' => (float) $params[$key]['max'],
+                                    ]
+                                ],
+                            ];
+                        }
+                        break;
+                    case self::RULE_RANGE_DATE:
+                        foreach ($relations as $key => $relation) {
+                            if (!isset($params[$key])) {
+                                continue;
+                            }
+                            if (!isset($params[$key]['from']) || !isset($params[$key]['to'])) {
+                                throw new Exception('Wrong value for RULE_RANGE_DATE, key is - ' . $key . '. Required field is from/to');
+                            }
+                            $data[] = [
+                                'range' => [
+                                    $relation => [
+                                        'gte' => $params[$key]['from'],
+                                        'lte' => $params[$key]['to'],
+                                        'format' => 'yyyy-MM-dd',
                                     ]
                                 ],
                             ];
@@ -396,10 +473,10 @@ class ModelSearchBase extends AbstractElasticSearchBase
     }
 
     /**
-     * @param $searchResult
+     * @param array $searchResult
      * @return array
      */
-    private function prepareResult($searchResult = [])
+    private function prepareResult(array $searchResult = []) : array
     {
         $result = [];
 
@@ -410,6 +487,53 @@ class ModelSearchBase extends AbstractElasticSearchBase
                 $result[] = $item['_source'];
             }
         }
+
+        return $result;
+    }
+
+    /**
+     * @param array $data
+     * @return array
+     */
+    private function prepareClustering(array $data = []) : array
+    {
+        $geo = new Geohash();
+
+        $groups = [];
+
+        foreach ($data as $item) {
+            $geoHash = $geo->encode($item['location']['lat'], $item['location']['lon'], 6);
+            $groups[$geoHash][] = $item;
+        }
+
+        $result = [];
+        $key = 0;
+
+        foreach ($groups as $group) {
+            foreach ($group as $item) {
+                $result[$key][] = $item;
+            }
+            $key++;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array $conditions
+     * @return array
+     */
+    private function prepareOverWriteRules(array $conditions = []) : array
+    {
+        $result = ['isChanged' => true];
+
+        $conditions = $conditions['query'];
+
+        foreach ($this->overWriteRules as $group => $rules) {
+            $conditions[$group] = array_merge($this->overWriteRules[$group], $conditions[$group] ?? []);
+        }
+
+        $result['query'] = $conditions;
 
         return $result;
     }

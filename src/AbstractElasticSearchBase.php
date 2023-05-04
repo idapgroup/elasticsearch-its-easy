@@ -20,11 +20,11 @@ abstract class AbstractElasticSearchBase
     abstract public function setSort();
 
     /**
-     * @param $ip
-     * @param $port
-     * @param $indexSearch
+     * @param string $ip
+     * @param string $port
+     * @param string $indexSearch
      */
-    public function __construct($ip, $port, $indexSearch)
+    public function __construct(string $ip, string $port, string $indexSearch)
     {
         $this->indexSearch = $indexSearch;
 
@@ -37,7 +37,7 @@ abstract class AbstractElasticSearchBase
      * @return void
      * @throws Exception
      */
-    public function reCreateIndex()
+    public function reCreateIndex() : void
     {
         $params = [
             'index' => $this->indexSearch,
@@ -66,11 +66,11 @@ abstract class AbstractElasticSearchBase
     }
 
     /**
-     * @param $params
+     * @param array $params
      * @return array
      * @throws Exception
      */
-    public function createIndex($params)
+    public function createIndex(array $params) : array
     {
         try {
             return $this->client->indices()->create($params);
@@ -80,13 +80,13 @@ abstract class AbstractElasticSearchBase
     }
 
     /**
-     * @param $body
-     * @param $primaryKey
-     * @param $primaryValue
+     * @param array $body
+     * @param string $primaryKey
+     * @param string $primaryValue
      * @return array|callable
      * @throws Exception
      */
-    public function addDocument($body, $primaryKey, $primaryValue)
+    public function addDocument(array $body, string $primaryKey, string $primaryValue)
     {
         try {
 
@@ -110,12 +110,12 @@ abstract class AbstractElasticSearchBase
     }
 
     /**
-     * @param $primaryKey
-     * @param $primaryValue
+     * @param string $primaryKey
+     * @param string $primaryValue
      * @return void
      * @throws Exception
      */
-    public function removeDocument($primaryKey, $primaryValue)
+    public function removeDocument(string $primaryKey, string $primaryValue)
     {
         try {
 
@@ -139,11 +139,11 @@ abstract class AbstractElasticSearchBase
     }
 
     /**
-     * @param $params
+     * @param array $params
      * @return array|callable|void
      * @throws Exception
      */
-    public function deleteDocumentByQuery($params)
+    public function deleteDocumentByQuery(array $params)
     {
         try {
             if ($params) {

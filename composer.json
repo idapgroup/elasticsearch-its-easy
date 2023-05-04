@@ -22,7 +22,8 @@
   "minimum-stability": "stable",
   "require": {
     "php": "^7.1",
-    "elasticsearch/elasticsearch": "7.9.0"
+    "elasticsearch/elasticsearch": "7.9.0",
+    "saikiran/geohash": "1.0.1"
   },
   "autoload": {
     "psr-4": {

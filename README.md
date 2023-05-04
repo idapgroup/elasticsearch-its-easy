@@ -113,16 +113,8 @@ $data = [
 use IdapGroup\ElasticsearchItsEasy\ModelSearchBase;
 
 class StaffModelSearch extends ModelSearchBase
-{
-    public function __construct($ip, $port, $indexSearch)
-    {
-        parent::__construct($ip, $port, $indexSearch);
-    }
-
-    /**
-     * @return void
-     */
-    public function setRules()
+{   
+    public function setRules() : void
     {
         $this->rules = [
             self::GROUP_MUST => [
@@ -153,11 +145,8 @@ class StaffModelSearch extends ModelSearchBase
             ],
         ];
     }
-
-    /**
-     * @return void
-     */
-    public function setSort()
+   
+    public function setSort() : void
     {
         $this->sort = [
             'user.id' => self::SORT_DESC,
@@ -170,7 +159,7 @@ class StaffModelSearch extends ModelSearchBase
 ### Create model based on elasticsearch configuration
 
 ```php
-$staffModelSearch = new StaffModelSearch('es01', 9200, 'staff_search');
+$staffModelSearch = new StaffModelSearch('es01', '9200', 'staff_search');
 ```
 
 ### Indexing Documents in Elasticsearch
@@ -196,7 +185,19 @@ $params = [
     'workSkillsId' => [36, 40],
     'userAge' => ['min' => 18, 'max' => 65],
     'workSalary' => ['min' => 500, 'max' => 5000],
-    'location' => ['lat' => 47.454589, 'lon' => 32.915673, 'distance' => 5000],
+    'location' => [
+        'point' => [
+            'lat' => 48.454589,
+            'lon' => 33.915673,
+            'distance' => 100000
+        ],
+        'rectangle' => [
+            'topLeftLat' => 55.710929,
+            'topLeftLng' => 14.090451,
+            'bottomRightLat' => 41.830140,
+            'bottomRightLng' => 41.802791
+        ],
+    ],
     'page' => 1,
     'limit' => 20
 ];
@@ -270,7 +271,19 @@ $params = [
     'workSkillsId' => [36, 40],
     'userAge' => ['min' => 18, 'max' => 65],
     'workSalary' => ['min' => 500, 'max' => 5000],
-    'location' => ['lat' => 47.454589, 'lon' => 32.915673, 'distance' => 5000],
+    'location' => [
+        'point' => [
+            'lat' => 48.454589,
+            'lon' => 33.915673,
+            'distance' => 100000
+        ],
+        'rectangle' => [
+            'topLeftLat' => 55.710929,
+            'topLeftLng' => 14.090451,
+            'bottomRightLat' => 41.830140,
+            'bottomRightLng' => 41.802791
+        ],       
+    ],
 ];
 ```
 
@@ -319,4 +332,83 @@ $result = $staffModelSearch->searchMap($params);
     ],
     //... etc.
 ]
+```
+
+## Additional settings
+
+#### Custom clustering (useful when markers on the map overlap each other and the maximum zoom does not solve the problem)
+
+```php
+$params = [
+    //...
+    'location' => [
+        'point' => [
+            'lat' => 48.454589,
+            'lon' => 33.915673,
+            'distance' => 100000
+        ],
+        'rectangle' => [
+            'topLeftLat' => 55.710929,
+            'topLeftLng' => 14.090451,
+            'bottomRightLat' => 41.830140,
+            'bottomRightLng' => 41.802791
+        ],
+        'clustering' => true,
+        'zoom' => 1,
+    ],
+    //...
+];
+```
+
+#### Response structure example 
+
+```php
+[
+    // Cluster 1
+    [
+        [
+            // data
+        ],
+        [
+            // data
+        ],
+        //...
+    ],
+    // Cluster 2
+    [
+        [
+            // data
+        ],
+        [
+            // data
+        ],
+        //...
+    ],
+    //... etc.
+]
+```
+
+#### Overwrite rules
+
+```php
+// Describe the rules in the associative array as required by the ES documentation
+$overWriteRules = [
+    'must' => [
+        [
+            'term' => [
+                'user.name.keyword' => 'Stepan',
+            ],
+        ],
+        [
+            'term' => [
+                'user.age' => 21,
+            ],
+        ],
+        //...
+    ],
+    //...
+];
+
+// Use a Method to Set Your Rules
+$staffModelSearch->setOverWriteRules($overWriteRules);
 ```
