@@ -39,7 +39,8 @@ $data = [
             'id' => 100,
             'email' => 'stepan21@gmail.com',
             'name' => 'Stepan',
-            'age' => 21
+            'age' => 21,
+            'birthday' => '2001-06-15',
         ],
         'work' => [
             'position' => [
@@ -72,7 +73,8 @@ $data = [
             'id' => 101,
             'email' => 'luigi@gmail.com',
             'name' => 'Luigi',
-            'age' => 29
+            'age' => 29,
+            'birthday' => '2005-03-20',
         ],
         'work' => [
             'position' => [
@@ -135,9 +137,12 @@ class StaffModelSearch extends ModelSearchBase
                 self::RULE_EQUAL => [
                     'workPositionId' => 'work.position.id'
                 ],
-                self::RULE_RANGE => [
+                self::RULE_RANGE_NUMBER => [
                     'userAge' => 'user.age',
                     'workSalary' => 'work.salary',
+                ],
+                self::RULE_RANGE_DATE => [
+                    'birthday' => 'user.birthday',
                 ],
             ],
             self::GROUP_LOCATION => [
@@ -360,7 +365,7 @@ $params = [
 ];
 ```
 
-#### Response structure example 
+#### Response structure example
 
 ```php
 [
