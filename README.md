@@ -21,7 +21,7 @@ or add
 ```json
 {
   "require": {
-    "idapgroup/elasticsearch-its-easy": "^1.0.0"
+    "idapgroup/elasticsearch-its-easy": "^1.1.0"
   }
 }
 ```
